@@ -1,0 +1,35 @@
+{
+  "score": 10.899319238570703,
+  "metrics": {
+    "peak_position": 0.3371212121212121,
+    "start_value": 0.010250762648823974,
+    "end_value": 0.00045758392077473544,
+    "rise": 0.9660364901904259,
+    "drop": 0.9758296689184751,
+    "shoulders_total": 0.0,
+    "late_tail_penalty": 0.0,
+    "second_peak_penalty": 0.0,
+    "wave_peak_count": 8.0,
+    "tail_peak_count": 2.0,
+    "smooth_curve_penalty": 0.0,
+    "missing_tail_penalty": 0.0,
+    "late_parasite_penalty": 0.0
+  },
+  "config": {
+    "population_size": 119,
+    "vocation_dim": 7,
+    "mutation_rate": 0.13827743349708288,
+    "mutation_sigma": 0.13311979782862662,
+    "landscape_energy": 157.24758354978286,
+    "landscape_loyalty": 0.4007030891519425,
+    "selection_alpha": 0.4966004364839771,
+    "generations": 1849,
+    "seed": 601362,
+    "wave_strength": 0.08052015905112908,
+    "wave_count": 14,
+    "wave_irregularity": 0.24901511190646775,
+    "tail_wave_strength": 0.07353234239733376,
+    "tail_wave_count": 3,
+    "tail_decay_power": 1.8256493961946643
+  }
+}

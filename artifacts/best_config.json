@@ -1,0 +1,17 @@
+{
+  "population_size": 119,
+  "vocation_dim": 4,
+  "mutation_rate": 0.13827743349708288,
+  "mutation_sigma": 0.13311979782862662,
+  "landscape_energy": 157.24758354978286,
+  "landscape_loyalty": 0.4007030891519425,
+  "selection_alpha": 0.4966004364839771,
+  "generations": 1849,
+  "seed": 601362,
+  "wave_strength": 0.08052015905112908,
+  "wave_count": 14,
+  "wave_irregularity": 0.24901511190646775,
+  "tail_wave_strength": 0.07353234239733376,
+  "tail_wave_count": 3,
+  "tail_decay_power": 1.8256493961946643
+}
