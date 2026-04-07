@@ -27,6 +27,7 @@ def render_curve(
     y_min: float | None = None,
     y_label: str | None = None,
 ) -> None:
+    # The renderer accepts either one curve or several named/colorized series for comparison plots.
     output = Path(output_path)
     output.parent.mkdir(parents=True, exist_ok=True)
 
@@ -55,6 +56,7 @@ def render_curve(
         ax.set_ylim(bottom=y_min)
 
     if marker_x is not None and marker_y is not None and marker_label:
+        # Shock annotation stays on the curve, while the generation number is pushed to the x-axis tick.
         x_span = max(len(x_values) * 0.08, 30.0)
         y_span = max(float(all_values.max()) * 0.10, 2.4)
         right_limit = float(x_values[-1]) if len(x_values) > 1 else float(marker_x)
@@ -87,6 +89,7 @@ def render_curve(
             va="bottom",
         )
         if shock_axis_label:
+            # We inject the shock generation into the normal tick set and recolor only that one label.
             ticks = [float(tick) for tick in ax.get_xticks()]
             ticks.append(float(marker_x))
             ticks = sorted(set(round(tick, 6) for tick in ticks if 0.0 <= tick <= float(x_values[-1])))
@@ -97,6 +100,7 @@ def render_curve(
                     tick_label.set_color("#d62728")
 
     if legend_lines:
+        # The parameter panel is drawn inside the plotting area to behave like a compact experiment legend.
         text_items = [
             TextArea(text, textprops={"color": color, "fontsize": LEGEND_FONT_SIZE})
             for text, color in legend_lines

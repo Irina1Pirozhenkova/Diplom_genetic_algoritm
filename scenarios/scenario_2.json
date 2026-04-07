@@ -1,0 +1,24 @@
+{
+  "scenario_name": "scenario_2",
+  "base_config_path": "../best_parameters/best_config.json",
+  "runs": [
+    {
+      "name": "energy_low",
+      "overrides": {
+        "landscape_energy": 52.41586118326095
+      }
+    },
+    {
+      "name": "selection_soft",
+      "overrides": {
+        "selection_alpha": 0.32
+      }
+    },
+    {
+      "name": "tail_strong",
+      "overrides": {
+        "tail_wave_strength": 0.11
+      }
+    }
+  ]
+}

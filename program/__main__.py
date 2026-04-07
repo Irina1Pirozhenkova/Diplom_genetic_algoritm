@@ -1,3 +1,5 @@
+"""Allow running the package as `python -m program`."""
+
 from .cli import main
 
 

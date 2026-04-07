@@ -26,9 +26,11 @@ class ModelConfig:
     tail_decay_power: float = 2.2
 
     def to_dict(self) -> dict[str, int | float]:
+        # JSON serialization is used both for the best config and for scheduler run manifests.
         return asdict(self)
 
     def save_json(self, path: str | Path) -> None:
+        # Config files are always saved in UTF-8 so scenario files and README examples stay portable.
         Path(path).write_text(
             json.dumps(self.to_dict(), ensure_ascii=False, indent=2),
             encoding="utf-8",
@@ -36,6 +38,7 @@ class ModelConfig:
 
     @classmethod
     def load_json(cls, path: str | Path) -> "ModelConfig":
+        # Loading through one method keeps the scheduler, CLI and tests consistent.
         data = json.loads(Path(path).read_text(encoding="utf-8"))
         return cls(**data)
 
@@ -53,6 +56,7 @@ class EnvironmentShockConfig:
     recovery_rate: float
 
     def to_dict(self) -> dict[str, str | int | float]:
+        # Shock settings are exported into experiment_scenarios.json for transparency.
         return asdict(self)
 
 

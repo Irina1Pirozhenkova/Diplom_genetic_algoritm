@@ -32,6 +32,7 @@ DOWN_COLOR = "#1f4e8c"
 
 
 def sample_config(rng: np.random.Generator) -> ModelConfig:
+    # Random search keeps vocation_dim fixed because the public experiments use four vocation axes.
     population_size = int(rng.integers(80, 241))
     return ModelConfig(
         population_size=population_size,
@@ -57,6 +58,7 @@ def run_search(
     seeds_per_trial: int = DEFAULT_SEEDS_PER_TRIAL,
     search_seed: int = 42,
 ) -> SearchResult:
+    # Random search checks several seeds per template so the chosen config is not just a lucky run.
     rng = np.random.default_rng(search_seed)
     best_result: SearchResult | None = None
 
@@ -103,6 +105,7 @@ def _clone_config(config: ModelConfig) -> ModelConfig:
 
 
 def _experimental_base_config(config: ModelConfig) -> ModelConfig:
+    # Every rendered experiment uses the article-inspired four-dimensional vocation interpretation.
     base = _clone_config(config)
     base.vocation_dim = FIXED_VOCATION_DIM
     return base
@@ -127,7 +130,7 @@ def _legend_base_lines(config: ModelConfig) -> list[tuple[str, str]]:
 
 def _legend_lines_for_energy(config: ModelConfig, up: ModelConfig, down: ModelConfig) -> list[tuple[str, str]]:
     return [
-        ("\u0411\u0430\u0437\u0430", BASE_COLOR),
+        (f"E = {config.landscape_energy:.2f}", BASE_COLOR),
         (f"E x3 = {up.landscape_energy:.2f}", UP_COLOR),
         (f"E /3 = {down.landscape_energy:.2f}", DOWN_COLOR),
         (f"I = {config.vocation_dim} (\u0432\u043e\u0435\u043d\u043d\u0430\u044f \u0441\u0438\u043b\u0430, \u044d\u043a\u043e\u043d\u043e\u043c\u0438\u043a\u0430, \u0442\u043e\u0440\u0433\u043e\u0432\u043b\u044f, \u043a\u0443\u043b\u044c\u0442\u0443\u0440\u0430)", "black"),
@@ -139,7 +142,7 @@ def _legend_lines_for_energy(config: ModelConfig, up: ModelConfig, down: ModelCo
 
 def _legend_lines_for_loyalty(config: ModelConfig, up: ModelConfig, down: ModelConfig) -> list[tuple[str, str]]:
     return [
-        ("\u0411\u0430\u0437\u0430", BASE_COLOR),
+        (f"K = {config.landscape_loyalty:.4f}", BASE_COLOR),
         (f"K x3 = {up.landscape_loyalty:.4f}", UP_COLOR),
         (f"K /3 = {down.landscape_loyalty:.4f}", DOWN_COLOR),
         (f"I = {config.vocation_dim} (\u0432\u043e\u0435\u043d\u043d\u0430\u044f \u0441\u0438\u043b\u0430, \u044d\u043a\u043e\u043d\u043e\u043c\u0438\u043a\u0430, \u0442\u043e\u0440\u0433\u043e\u0432\u043b\u044f, \u043a\u0443\u043b\u044c\u0442\u0443\u0440\u0430)", "black"),
@@ -150,6 +153,7 @@ def _legend_lines_for_loyalty(config: ModelConfig, up: ModelConfig, down: ModelC
 
 
 def _base_variants(config: ModelConfig) -> dict[str, ModelConfig]:
+    # Each comparison changes only one key parameter while keeping the rest identical.
     base_config = _experimental_base_config(config)
     energy_up = _clone_config(base_config)
     energy_up.landscape_energy *= VARIATION_FACTOR
@@ -183,6 +187,7 @@ def _save_experiment_scenarios(
     shocks: dict[str, tuple[EnvironmentShockConfig, str]],
     output_dir: Path,
 ) -> Path:
+    # This JSON explains exactly which configurations were rendered for the six output graphs.
     scenario_path = output_dir / "experiment_scenarios.json"
     base_config = variants["base"]
     payload: dict[str, object] = {
@@ -219,6 +224,7 @@ def _save_experiment_scenarios(
 
 
 def render_all_outputs(config: ModelConfig, base_output: str | Path) -> dict[str, Path]:
+    # One configuration produces six deliverables: three baseline comparisons, two shocks, and C(t).
     output_paths = _derive_output_paths(base_output)
     output_paths["base_passionarity"].parent.mkdir(parents=True, exist_ok=True)
 
@@ -236,7 +242,7 @@ def render_all_outputs(config: ModelConfig, base_output: str | Path) -> dict[str
     energy_down_result = simulate(variants["energy_down"])
     render_curve(
         [
-            ("\u0411\u0430\u0437\u0430", base_result.passionarity, BASE_COLOR),
+            (f"E = {variants['base'].landscape_energy:.2f}", base_result.passionarity, BASE_COLOR),
             ("E x3", energy_up_result.passionarity, UP_COLOR),
             ("E /3", energy_down_result.passionarity, DOWN_COLOR),
         ],
@@ -250,7 +256,7 @@ def render_all_outputs(config: ModelConfig, base_output: str | Path) -> dict[str
     loyalty_down_result = simulate(variants["loyalty_down"])
     render_curve(
         [
-            ("\u0411\u0430\u0437\u0430", base_result.passionarity, BASE_COLOR),
+            (f"K = {variants['base'].landscape_loyalty:.4f}", base_result.passionarity, BASE_COLOR),
             ("K x3", loyalty_up_result.passionarity, UP_COLOR),
             ("K /3", loyalty_down_result.passionarity, DOWN_COLOR),
         ],
@@ -270,6 +276,7 @@ def render_all_outputs(config: ModelConfig, base_output: str | Path) -> dict[str
 
     shocks = _build_shock_outputs()
     for key, (shock, title) in shocks.items():
+        # Shock graphs reuse the same baseline config so only the shock timing changes.
         shocked_result = simulate(variants["base"], shock=shock)
         marker_x = int(round(shock.start_ratio * variants["base"].generations))
         marker_x = min(max(marker_x, 0), len(shocked_result.passionarity) - 1)
@@ -291,6 +298,7 @@ def render_all_outputs(config: ModelConfig, base_output: str | Path) -> dict[str
 
 
 def save_search_result(result: SearchResult, output_dir: str | Path) -> dict[str, Path]:
+    # Search persists both the best configuration and the exact visual package built from it.
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
 

@@ -1,0 +1,25 @@
+{
+  "scenario_name": "scenario_3",
+  "base_config_path": "../best_parameters/best_config.json",
+  "runs": [
+    {
+      "name": "energy_mid",
+      "overrides": {
+        "landscape_energy": 260.0
+      }
+    },
+    {
+      "name": "loyalty_high",
+      "overrides": {
+        "landscape_loyalty": 1.15
+      }
+    },
+    {
+      "name": "waves_dense",
+      "overrides": {
+        "wave_count": 20,
+        "wave_strength": 0.14
+      }
+    }
+  ]
+}

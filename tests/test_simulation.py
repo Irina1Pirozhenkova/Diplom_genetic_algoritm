@@ -8,15 +8,18 @@ from unittest import mock
 
 import numpy as np
 
-from ethnogenesis.model import ModelConfig
-from ethnogenesis.render import render_curve
-from ethnogenesis.scoring import score_curve
-from ethnogenesis.search import FIXED_VOCATION_DIM, SHOCK_LABEL, render_all_outputs
-from ethnogenesis.simulator import default_environment_shocks, initialize_population, simulate
+from program.batch import DEFAULT_SCENARIO_PATH, build_effective_config, load_scenario, run_batch_scenario
+from program.cli import _resolve_scenario_name, main
+from program.model import ModelConfig
+from program.render import render_curve
+from program.scoring import score_curve
+from program.search import FIXED_VOCATION_DIM, SHOCK_LABEL, render_all_outputs
+from program.simulator import default_environment_shocks, initialize_population, simulate
 
 
 class SimulationTests(unittest.TestCase):
     def setUp(self) -> None:
+        # A compact config is enough for tests while still exercising the full simulation pipeline.
         self.config = ModelConfig(
             population_size=120,
             vocation_dim=4,
@@ -90,12 +93,9 @@ class SimulationTests(unittest.TestCase):
             path = Path(tmpdir) / "curve.png"
             with mock.patch("matplotlib.axes._axes.Axes.set_xlabel") as set_xlabel:
                 with mock.patch("matplotlib.axes._axes.Axes.set_ylabel") as set_ylabel:
-                    render_curve([0.0, 1.0, 0.5], path, title="\u0422\u0435\u0441\u0442")
-            self.assertEqual(set_xlabel.call_args.args[0], "\u041f\u043e\u043a\u043e\u043b\u0435\u043d\u0438\u0435")
-            self.assertEqual(
-                set_ylabel.call_args.args[0],
-                "\u0421\u0443\u043c\u043c\u0430\u0440\u043d\u0430\u044f \u043f\u0430\u0441\u0441\u0438\u043e\u043d\u0430\u0440\u043d\u043e\u0441\u0442\u044c",
-            )
+                    render_curve([0.0, 1.0, 0.5], path, title="Тест")
+            self.assertEqual(set_xlabel.call_args.args[0], "Поколение")
+            self.assertEqual(set_ylabel.call_args.args[0], "Суммарная пассионарность")
 
     def test_render_accepts_shock_marker(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -121,12 +121,12 @@ class SimulationTests(unittest.TestCase):
             path = Path(tmpdir) / "curve.png"
             render_curve(
                 [
-                    ("\u0411\u0430\u0437\u0430", [0.0, 1.0, 0.5], "black"),
+                    ("E = 100.0", [0.0, 1.0, 0.5], "black"),
                     ("E x3", [0.0, 1.2, 0.6], "#8b1e1e"),
                 ],
                 path,
                 legend_lines=[
-                    ("\u0411\u0430\u0437\u0430", "black"),
+                    ("E = 100.0", "black"),
                     ("E x3", "#8b1e1e"),
                     ("I = 4 (...)", "black"),
                 ],
@@ -172,10 +172,7 @@ class SimulationTests(unittest.TestCase):
     def test_energy_shock_only_changes_energy_not_loyalty(self) -> None:
         result = simulate(self.config, shock=self.energy_only)
         start_idx = int(self.energy_only.start_ratio * self.config.generations)
-        self.assertLess(
-            min(result.effective_energy_limit[start_idx:]),
-            self.config.landscape_energy * 0.5,
-        )
+        self.assertLess(min(result.effective_energy_limit[start_idx:]), self.config.landscape_energy * 0.5)
         self.assertTrue(
             np.allclose(
                 np.asarray(result.effective_loyalty[start_idx:], dtype=np.float64),
@@ -189,6 +186,83 @@ class SimulationTests(unittest.TestCase):
         self.assertEqual(self.energy_only.recovery_ratio, self.energy_early.recovery_ratio)
         self.assertEqual(self.energy_only.recovery_rate, self.energy_early.recovery_rate)
         self.assertNotEqual(self.energy_only.start_ratio, self.energy_early.start_ratio)
+
+    def test_build_effective_config_applies_only_requested_overrides(self) -> None:
+        updated = build_effective_config(
+            self.config,
+            {
+                "landscape_energy": 999.0,
+                "mutation_rate": 0.11,
+                "vocation_dim": 9,
+            },
+        )
+        self.assertEqual(updated.landscape_energy, 999.0)
+        self.assertEqual(updated.mutation_rate, 0.11)
+        self.assertEqual(updated.landscape_loyalty, self.config.landscape_loyalty)
+        self.assertEqual(updated.vocation_dim, FIXED_VOCATION_DIM)
+
+    def test_load_scenario_validates_runs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            scenario_path = Path(tmpdir) / "invalid.json"
+            scenario_path.write_text(json.dumps({"scenario_name": "bad"}), encoding="utf-8")
+            with self.assertRaises(ValueError):
+                load_scenario(scenario_path)
+
+    def test_run_batch_scenario_creates_package_structure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base_config_path = Path(tmpdir) / "best_config.json"
+            self.config.save_json(base_config_path)
+            scenario_path = Path(tmpdir) / "scenario.json"
+            scenario_path.write_text(
+                json.dumps(
+                    {
+                        "scenario_name": "demo",
+                        "base_config_path": "best_config.json",
+                        "runs": [
+                            {"name": "energy_up", "overrides": {"landscape_energy": 300.0}},
+                            {"name": "loyalty_down", "overrides": {"landscape_loyalty": 0.2}},
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            package_dir = run_batch_scenario(scenario_path, output_root=Path(tmpdir) / "scheduler_runs", workers=1)
+            self.assertTrue((package_dir / "scenario.json").exists())
+            self.assertTrue((package_dir / "manifest.json").exists())
+            run_dirs = sorted(path for path in package_dir.iterdir() if path.is_dir())
+            self.assertEqual(len(run_dirs), 2)
+            for run_dir in run_dirs:
+                self.assertTrue((run_dir / "effective_config.json").exists())
+                self.assertTrue((run_dir / "experiment_scenarios.json").exists())
+                self.assertTrue((run_dir / "passionarity_base.png").exists())
+                self.assertTrue((run_dir / "criterion_C_base.png").exists())
+
+    def test_cli_run_supports_interactive_best_mode(self) -> None:
+        with mock.patch("builtins.input", side_effect=["1"]):
+            with mock.patch("program.cli._run_best_mode") as run_best_mode:
+                main(["run"])
+        run_best_mode.assert_called_once()
+
+    def test_cli_run_supports_interactive_scenario_mode(self) -> None:
+        with mock.patch("builtins.input", side_effect=["2", DEFAULT_SCENARIO_PATH.stem]):
+            with mock.patch("program.cli._run_scenario_mode") as run_scenario_mode:
+                main(["run"])
+        run_scenario_mode.assert_called_once()
+
+    def test_cli_run_supports_direct_scenario_argument(self) -> None:
+        with mock.patch("program.cli._run_scenario_mode") as run_scenario_mode:
+            main(["run", "--scenario", "scenario_1"])
+        run_scenario_mode.assert_called_once()
+
+    def test_cli_resolves_short_scenario_name(self) -> None:
+        resolved = _resolve_scenario_name("scenario_1")
+        self.assertEqual(resolved, Path("scenarios/scenario_1.json"))
+
+    def test_cli_rejects_unknown_scenario_name(self) -> None:
+        with self.assertRaises(ValueError):
+            _resolve_scenario_name("missing_scenario")
 
     def test_shocked_curve_drops_faster_than_base_after_shock(self) -> None:
         comparison_config = ModelConfig(
@@ -211,8 +285,8 @@ class SimulationTests(unittest.TestCase):
         base = simulate(comparison_config)
         energy = simulate(comparison_config, shock=self.energy_only)
         start_idx = int(self.energy_only.start_ratio * comparison_config.generations)
-        base_tail_mean = float(np.mean(base.passionarity[start_idx + 15 : start_idx + 35]))
-        energy_tail_mean = float(np.mean(energy.passionarity[start_idx + 15 : start_idx + 35]))
+        base_tail_mean = float(np.mean(base.passionarity[start_idx + 15: start_idx + 35]))
+        energy_tail_mean = float(np.mean(energy.passionarity[start_idx + 15: start_idx + 35]))
         self.assertLess(energy_tail_mean, base_tail_mean)
 
     def test_early_shock_hits_curve_earlier_than_late_shock(self) -> None:

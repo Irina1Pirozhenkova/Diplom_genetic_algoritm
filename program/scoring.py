@@ -16,6 +16,7 @@ def moving_average(values: np.ndarray, window: int) -> np.ndarray:
 
 
 def _local_maxima(values: np.ndarray) -> np.ndarray:
+    # Pure local maxima are enough here because the curve is already smoothed before peak selection.
     if values.size < 3:
         return np.array([], dtype=np.int64)
     return np.where((values[1:-1] > values[:-2]) & (values[1:-1] >= values[2:]))[0] + 1
@@ -33,10 +34,12 @@ def _count_shoulders(values: np.ndarray, peak_index: int) -> tuple[int, int]:
 
 
 def _closeness(value: float, target: float, width: float) -> float:
+    # This helper turns "close to target" into a soft score in [0, 1].
     return max(0.0, 1.0 - abs(value - target) / max(width, EPSILON))
 
 
 def _peak_prominence(values: np.ndarray, index: int, radius: int) -> float:
+    # Prominence helps ignore tiny ripples that are too small to matter visually.
     left = values[max(0, index - radius): index + 1]
     right = values[index: min(values.size, index + radius + 1)]
     if left.size == 0 or right.size == 0:
@@ -67,6 +70,7 @@ def _select_peaks(
 
 
 def score_curve(series: list[float] | np.ndarray) -> tuple[float, dict[str, float]]:
+    # The scoring function prefers an early main hump, multiple moderate waves and a low tail.
     values = np.asarray(series, dtype=np.float64)
     if values.size < 20:
         return -1e9, {"reason": -1.0}
